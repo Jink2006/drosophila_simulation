@@ -12,7 +12,11 @@ os.makedirs("./change", exist_ok=True)
 # 2. GUIと並列計算コンテキストの初期化
 # ==========================================
 h.load_file("nrngui.hoc")
-pc = h.ParallelContext()
+
+# 【超重要修正】HOC側のグローバル空間にも「pc」というオブジェクト枠を強制実体化させる
+h("objref pc")
+h.pc = h.ParallelContext()
+pc = h.pc  # Python側からも今まで通り pc.xxx で呼べるようにリンク
 
 # ==========================================
 # 3. パラメータの初期設定 (HOCグローバル変数の確実な動的定義)
