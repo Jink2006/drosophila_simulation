@@ -15,57 +15,60 @@ h.load_file("nrngui.hoc")
 pc = h.ParallelContext()
 
 # ==========================================
-# 3. パラメータの初期設定
-#    (シェルスクリプト等で既に宣言されていない場合のみ代入)
+# 3. パラメータの初期設定 (HOCグローバル変数の確実な動的定義)
 # ==========================================
-def set_hoc_param(name, value):
+def define_hoc_var(name, val):
     if not hasattr(h, name):
-        setattr(h, name, value)
+        # HOCのインタプリタに直接文字列を流し込んで「強制変数宣言」させる
+        h(f"{name} = {val}")
+    else:
+        setattr(h, name, val)
 
-set_hoc_param("OUT1_E", 0.002)
-set_hoc_param("OUT1_I", 0.02)
-set_hoc_param("IO_E", 0.001)
-set_hoc_param("IO_I2E", 0.008)
-set_hoc_param("IO_I2I", 0.005)
-set_hoc_param("OUT1_SPON_E_K", 0.12)
-set_hoc_param("OUT1_SPON_E_T", 0.32)
-set_hoc_param("DOPAMINE", 0.01)
-set_hoc_param("LEARNING_RATE", 0.00025)
-set_hoc_param("OUT1_SPON_I_K", 0.12)
-set_hoc_param("OUT1_SPON_I_T", 0.25)
-set_hoc_param("LTD", 1.0)
+# ① デフォルト値の上書き系
+define_hoc_var("OUT1_E", 0.002)
+define_hoc_var("OUT1_I", 0.02)
+define_hoc_var("IO_E", 0.001)
+define_hoc_var("IO_I2E", 0.008)
+define_hoc_var("IO_I2I", 0.005)
+define_hoc_var("OUT1_SPON_E_K", 0.12)
+define_hoc_var("OUT1_SPON_E_T", 0.32)
+define_hoc_var("DOPAMINE", 0.01)
+define_hoc_var("LEARNING_RATE", 0.00025)
+define_hoc_var("OUT1_SPON_I_K", 0.12)
+define_hoc_var("OUT1_SPON_I_T", 0.25)
+define_hoc_var("LTD", 1.0)
 
-# シミュレーション規模・時間の設定
-h.v_init = -65.0
-h.NCELL = 512
-h.NCELL_E = 256
-h.NCELL_OUT1 = 400
-h.NCELL_OUT1_E = 320
-h.NCELL_OUT2 = 100
-h.NCELL_OUT2_E = 80
-h.NCELL_VTA = 10
-h.NCELL_CS = 10
-h.NSYN = 10
-h.NSYN_MAX = (h.NCELL - 1) * h.NSYN
-h.NCELL_FULL = h.NCELL + h.NCELL_OUT1 + h.NCELL_OUT2
-h.BRANCH_NUM = 10
+# ② シミュレーション規模・時間設定系
+define_hoc_var("v_init", -65.0)
+define_hoc_var("NCELL", 512)
+define_hoc_var("NCELL_E", 256)
+define_hoc_var("NCELL_OUT1", 400)
+define_hoc_var("NCELL_OUT1_E", 320)
+define_hoc_var("NCELL_OUT2", 100)
+define_hoc_var("NCELL_OUT2_E", 80)
+define_hoc_var("NCELL_VTA", 10)
+define_hoc_var("NCELL_CS", 10)
+define_hoc_var("NSYN", 10)
+define_hoc_var("BRANCH_NUM", 10)
 
-# ★テスト用に実行時間を短くしたい場合はここを調整
-h.LEARNING_TIMES = 12 
-h.STIM_DUR = 1000
-h.STIM_DUR_MOVE = 1000000
-h.START_STIM = 20
+define_hoc_var("LEARNING_TIMES", 12) 
+define_hoc_var("STIM_DUR", 1000)
+define_hoc_var("STIM_DUR_MOVE", 1000000)
+define_hoc_var("START_STIM", 20)
 
-h.dt = 0.025
-h.tstop_max = 65000.0
-h.stimInt = 25
-h.stimNum = 36
+define_hoc_var("dt", 0.025)
+define_hoc_var("tstop_max", 65000.0)
+define_hoc_var("stimInt", 25)
+define_hoc_var("stimNum", 36)
+
+# 計算で求まるパラメータ（上の定義により h.NCELL が実体化したため計算可能）
+define_hoc_var("NSYN_MAX", (h.NCELL - 1) * h.NSYN)
+define_hoc_var("NCELL_FULL", h.NCELL + h.NCELL_OUT1 + h.NCELL_OUT2)
 
 startTest = h.STIM_DUR * 5 * h.LEARNING_TIMES + 500
 dur = h.tstop_max
-vta_flag = 0
-else_flag = 2
-
+define_hoc_var("vta_flag", 0)
+define_hoc_var("else_flag", 2)
 # ==========================================
 # 4. サブモジュール（既存HOCファイル）の読み込み
 # ==========================================
