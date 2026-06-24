@@ -92,15 +92,9 @@ BREAKPOINT {
 	:printf("i = %g (nA)\n",i)
 	if(i>i_max){
 	    i_max = i
-	    VERBATIM
-	    usleep(1);
-	    ENDVERBATIM
 	}
 	if(i<i_min){
 	    i_min = i
-	    VERBATIM
-	    usleep(1);
-	    ENDVERBATIM
 	}
 	:printf("i_max = %g\t i_min = %g\n",i_max,i_min)
     }else{
