@@ -1,6 +1,7 @@
 NEURON {
 	POINT_PROCESS ExpSynSTDP
 	RANGE tau, e, i, d, p, dtau, ptau, verbose, learning, LR, maxWeight, minWeight, numbre, debug, forSpike, tmp, forDA
+	RANGE ltd　
 	NONSPECIFIC_CURRENT i
 }
 
