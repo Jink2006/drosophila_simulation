@@ -1,0 +1,473 @@
+//the next case problem
+//add the DA-signaling section from plusDA
+
+load_file("nrngui.hoc")
+//load cell template
+//setting
+if(!name_declared("OUT1_E")) { OUT1_E=0.002 }
+if(!name_declared("OUT1_I")) { OUT1_I=0.02 }
+if(!name_declared("IO_E")) { IO_E=0.001 }
+if(!name_declared("IO_I2E")) { IO_I2E=0.008 }
+if(!name_declared("IO_I2I")) { IO_I2I=0.005 }
+if(!name_declared("OUT1_SPON_E_K")) { OUT1_SPON_E_K=0.12 }
+if(!name_declared("OUT1_SPON_E_T")) { OUT1_SPON_E_T=0.32 }
+if(!name_declared("DOPAMINE")) { DOPAMINE=0.01}
+if(!name_declared("LEARNING_RATE")) { LEARNING_RATE=0.00025 }
+if(!name_declared("OUT1_SPON_I_K")) { OUT1_SPON_I_K=0.12 }
+if(!name_declared("OUT1_SPON_I_T")) { OUT1_SPON_I_T=0.25 }
+if(!name_declared("LTD")) { LTD=1 }
+
+v_init = -65
+NCELL = 512//200
+NCELL_E = 256//100 //must be (<NCELL)
+NCELL_OUT1 = 400
+NCELL_OUT1_E = 320
+NCELL_OUT2 = 100 //this number should be considered more
+NCELL_OUT2_E = 80
+NCELL_VTA = 10
+NCELL_CS = 10
+NSYN = 10
+NSYN_MAX = (NCELL-1)*NSYN
+
+NCELL_FULL = NCELL + NCELL_OUT1 + NCELL_OUT2
+
+BRANCH_NUM = 10
+
+LEARNING_TIMES = 12//6//3//2//1//2//30
+STIM_DUR = 1000//10000//75000//5000//390000//230000//200000//75000//140000//75000<-55m//100000//25000//2000//5//30 //until now(12/20), here is not changed, so it may cause the learning unproceeding??
+STIM_DUR_MOVE = 1000000
+START_STIM = 20
+
+dt = 0.025//<-for test0.1//0.025
+tstop_max = 65000//35000//30000//15000//10000//75000//5000//390000//230000//200000//75000//140000//75000//25000//15000//30//20//3000//1000//200//1000//200//tstop = dt*10//10//200//500//100000
+t = 0
+stimInt = 25//50//30//should be less than 40Hz ??//<-learn7 66//<-learn2 learn1->//40//66//40//20//1000
+stimNum = 36//76//80//600//1600//1540//650//450//200//100//100//7//50//7//int(tstop/stimInt)
+
+startTest = STIM_DUR*5*LEARNING_TIMES+500
+
+dur = tstop_max
+//identify the VTA parameter
+vta_flag = 0
+else_flag = 2
+objref pc
+pc = new ParallelContext()
+NPROC = 10
+load_file("read.hoc")
+load_file("cells.hoc")
+load_file("connectCells.hoc")
+load_file("setStim.hoc")
+load_file("signalDA.hoc")
+//load_file("myrun.hoc")
+read_mat(NCELL_E,NCELL_OUT1, NCELL_OUT2,BRANCH_NUM)
+makeCells(NCELL_FULL,BRANCH_NUM)
+makeConvert(NCELL_FULL)
+pc.barrier()
+printf("finich make section\n")
+//checkgid()
+//pc.barrier()
+//initCount()
+connectInputCells(NCELL_E, NCELL_VTA, NCELL, NCELL_FULL,BRANCH_NUM)
+printf("connect input is end \n")
+connectOutput1Cells(NCELL_OUT1_E,NCELL_VTA,NCELL_OUT1,NCELL,NCELL_FULL,BRANCH_NUM)
+printf("connect output1 is end \n")
+connectOutput2Cells(NCELL_OUT2_E,NCELL_VTA,NCELL_OUT2,NCELL+NCELL_OUT1,NCELL_FULL,BRANCH_NUM)
+printf("connect output2 is end \n")
+connectI2O(NCELL_E,NCELL_OUT1,NCELL_OUT1_E,NCELL_OUT2,NCELL_OUT2_E,NCELL_VTA,NCELL,BRANCH_NUM)
+printf("connect i2o is end \n")
+// {con.resize(1,1)}
+// {con_out1.resize(1,1)}
+// {con_out2.resize(1,1)}
+// {con_i2o1.resize(1,1)}
+// {con_i2o2.resize(1,1)}
+
+{con_order_input.resize(1,1)}
+{con_order_out1.resize(1,1)}
+{con_order_out2.resize(1,1)}
+{con_order_i2o1.resize(1,1)}
+{con_order_i2o2.resize(1,1)}
+
+
+//confirm.printf("%0.5f ")
+pc.barrier()
+/*
+read_weight(nclist.count,nclist_out1.count,nclist_out2.count,nclist_i2o.count)
+subst()
+
+pc.barrier()
+*/
+set_LR()
+
+pc.barrier()
+
+printf("finish connect section\n")
+
+
+setStim(stimNum, NCELL_VTA, dur, NCELL_CS,stimInt,NCELL_E,LEARNING_TIMES,START_STIM,NCELL_FULL)
+
+objref tvec, idvec
+
+proc setSpikeRecord() {local i localobj nc, nil
+    tvec = new Vector()
+    idvec = new Vector()
+    
+    for i=0, cells.count-1 {
+	nc = cells.object(i).connect2target(nil)
+	nc.record(tvec,idvec,nc.srcgid)
+    }
+}
+
+proc spikerecord2(){local i
+    tvec = new Vector()
+    idvec = new Vector()
+    
+    for i=0, NCELL_FULL-1 {
+    	if(pc.gid_exists(i)){
+    	pc.spike_record(i,tvec,idvec)
+	}
+	}
+    //pc.spike_record(-1,tvec,idvec)
+}
+
+spikerecord2()
+
+//setSpikeRecord()
+
+/////////////////for record and watching section///////////////////////
+
+//load_file("graph.ses")
+/*
+objref rect, recv
+rect = new Vector()
+recv = new Vector()
+
+rect.record(&t)
+//if(pc.gid_exists(0)){
+recv.record(&cells.object(8).soma.v(0.5))//previously monitor 82
+//}
+*/
+
+////////////////continue to save section///////////////////////////////
+finitialize(v_init)
+fcurrent()
+//signalDA(NCELL_VTA, NCELL_E, NSYN_MAX)
+printf("the first DA = %lf\n",cells.object(0).synlist_e.object(0).forDA)
+///////////////execute section///////////////////////////////////////
+//run()
+//myrun()
+/////////////end execute section//////////////////////////////////////
+
+
+
+
+
+pc.set_maxstep(10)
+stdinit()
+steptime = dt
+tstop = steptime
+stim_timer = STIM_DUR
+stim_timer_move = STIM_DUR_MOVE
+stim_flag = 0
+stim_flag_move = 0
+stim_counter=0
+SECTION_OUT1_E = int(NCELL_OUT1_E/5)
+SECTION_OUT1_I = int((NCELL_OUT1-NCELL_OUT1_E)/5)
+SECTION_OUT2_E = int(NCELL_OUT2_E/4)
+SECTION_OUT2_I = int((NCELL_OUT2-NCELL_OUT2_E)/4)
+datiming = 5//1//2//1
+
+changeFlags1(0,64,320,336,400,100,512,320,80)
+changeFlags2(0,20,80,85,400,100,512,320,80)
+forTestOut1()
+//forTestOut2()
+
+rec_timing=0
+rec_counter=0
+//objref weight_rec_i[30000], weight_rec_o1[30000], weight_rec_o2[30000]
+objref weight_rec_i2o[40000]
+
+init_time=STIM_DUR
+init_interval=STIM_DUR
+print_time = 1000
+
+for(time=0;time<tstop_max;time+=datiming){
+    //printf("\n\n\nt = %lf \n\n\n",t)
+    /*if(time>=tstop_max-dt){
+	printf("\n\n\nt=%lf\n\n\n",t)
+    }*/
+    pc.psolve(time+datiming)
+    pc.barrier()
+    //tstop += steptime
+    //if(time>=datiming){
+    signalDA(NCELL_VTA,NCELL_E,NSYN_MAX,NCELL_FULL,NCELL,NCELL_OUT1,NCELL_OUT2,NCELL_OUT1_E,NCELL_OUT2_E)
+	//datiming = datiming + 1//2//5//1
+    //}
+    /*if(time==1 || time==5000 || time==10000 || time == 15000 || time==20000){
+	for conf=0, 4 {
+	    if(pc.gid_exists(512+conf*12)){
+		printf("flags is %d \n",pc.gid2cell(512+conf*12).synlist_e.o(0).forSpike)
+	    }
+	}
+    }*/
+    //koko kakinaosita kara moshiumakuikanakunattara koko (from == -> >=)
+    if(time>=init_time){
+	init_time += init_interval
+	initDA()
+    }
+    if(time >= print_time){
+	printf("now is %d [ms]\n",print_time)
+	print_time += 1000
+    }
+    
+    if(time>=startTest){
+	startTest += tstop_max
+	off_plast()
+	pc.barrier()
+    }
+    
+    rec_timing += 1
+    if(rec_timing==40 && time<startTest){
+	rec_timing = 0
+	//weight_rec_i[rec_counter] = new Vector(nclist.count)
+	//weight_rec_o1[rec_counter] = new Vector(nclist_out1.count)
+	//weight_rec_o2[rec_counter] = new Vector(nclist_out2.count)
+	weight_rec_i2o[rec_counter] = new Vector(nclist_i2o.count)
+	/*
+	for nc_num=0, nclist.count-1{
+	    weight_rec_i[rec_counter].x(nc_num) = nclist.o(nc_num).weight
+	}
+	for nc_num=0, nclist_out1.count-1{
+	    weight_rec_o1[rec_counter].x(nc_num) = nclist_out1.o(nc_num).weight
+	}
+	for nc_num=0, nclist_out2.count-1{
+	    weight_rec_o2[rec_counter].x(nc_num) = nclist_out2.o(nc_num).weight
+	}
+	*/
+	for nc_num=0, nclist_i2o.count-1{
+	    weight_rec_i2o[rec_counter].x(nc_num) = nclist_i2o.o(nc_num).weight
+	}
+	rec_counter += 1
+    }
+    
+    if(time>=stim_timer){
+	stim_timer += STIM_DUR
+	/*
+	if(stim_flag==4){
+	    stim_flag = 0
+	}else{
+	    stim_flag = stim_flag + 1
+	}*/
+	stim_counter += 1
+	if(stim_counter<=stim_order.size-1){
+            stim_flag = stim_order.x(stim_counter)
+        }
+	changeFlags1(0+stim_flag*SECTION_OUT1_E,64+stim_flag*SECTION_OUT1_E,320+stim_flag*SECTION_OUT1_I,336+stim_flag*SECTION_OUT1_I,400,100,512,320,80)
+    }
+    
+    if(time>=stim_timer_move){
+	stim_timer_move += STIM_DUR_MOVE
+	if(stim_flag_move==3){
+	    stim_flag_move = 0
+	}else{
+	    stim_flag_move = stim_flag_move + 1
+	}
+	changeFlags2(0+SECTION_OUT2_E*stim_flag_move,20+SECTION_OUT2_E*stim_flag_move,80+SECTION_OUT2_I*stim_flag_move,85+SECTION_OUT2_I*stim_flag_move,400,100,512,320,80)
+    }
+    
+    //test for change flags in stdp.mod
+    //and test for broadcast the DA value
+    /*
+    if(time==10){
+	changeFlags1(64,128,336,352,400,100,512,320,80)
+	changeFlags2(20,40,85,90,400,100,512,320,80)
+	changeDATest()
+    }
+    */
+    //pc.barrier()
+    /*
+    if(tstop>=tstop_max){
+	break
+    }
+    */
+}
+
+pc.barrier()
+
+
+//////////////save section/////////////////////////////////////
+/*
+objref savv
+strdef vname
+for rank=0, pc.nhost-1{
+    if(rank==pc.id){
+	savv = new File()
+	sprint(vname,"./result/volt%d.dat",pc.id)
+	savv.wopen(vname)
+	for i=0, rect.size()-1 {
+	    savv.printf("%g\t%g\n",rect.x(i),recv.x(i))
+	}
+	savv.close()
+    }
+    pc.barrier()
+}
+*/
+/*
+objref sav_connect
+sav_connect = new File()
+sav_connect.wopen("connect.dat")
+for i=0, cells.count-1 {
+    for j=0, NSYN-1 {
+	sav_connect.printf("%g\t%g\n",int(rec_connect[i][j]),nclist.object(i*NSYN+j).weight)
+    }
+    sav_connect.printf("\n")
+}
+sav_connect.close()
+*/
+/*
+objref mt
+{mt = new Matrix()}
+{printf("#  t (msec)\tIClamp\n")}
+{mt.resize(tvec.size(), 2)}
+{mt.setcol(0, tvec)}
+{mt.setcol(1, idvec)}
+{mt.printf("%0.5f ")}
+*/
+printf("the last da = %lf\n",cells.object(0).synlist_e.object(0).forDA)
+
+objref savSpike
+strdef filename
+
+for rank=0, pc.nhost-1{
+    if(rank==pc.id){
+	savSpike = new File()
+	sprint(filename,"./result/spike%d.txt",pc.id)
+	savSpike.wopen(filename)
+	for i=0, tvec.size()-1 {
+	    if(idvec.x(i)<NCELL_FULL){
+		savSpike.printf("%g\t%g\n",tvec.x(i),idvec.x(i))
+	    }
+	}
+	savSpike.close()
+    }
+    pc.barrier()
+}
+
+
+gettingtime = startsw()
+objref savWeight
+strdef file
+for rank=0, pc.nhost-1{
+    if(rank==pc.id){
+	savWeight = new File()
+	sprint(file,"./result/nclist%d.dat",pc.id)
+	savWeight.wopen(file)
+	for i=0, nclist.count-1 {
+	    savWeight.printf("%g\t",nclist.object(i).weight)
+	}
+	savWeight.close()
+	
+	savWeight = new File()
+	sprint(file,"./result/nclist_out1_%d.dat",pc.id)
+	savWeight.wopen(file)
+	for i=0, nclist_out1.count-1 {
+	    savWeight.printf("%g\t",nclist_out1.object(i).weight)
+	}
+	savWeight.close()
+	
+	savWeight = new File()
+	sprint(file,"./result/nclist_out2_%d.dat",pc.id)
+	savWeight.wopen(file)
+	for i=0, nclist_out2.count-1 {
+	    savWeight.printf("%g\t",nclist_out2.object(i).weight)
+	}
+	savWeight.close()
+	
+	savWeight = new File()
+	sprint(file,"./result/nclist_i2o_%d.dat",pc.id)
+	savWeight.wopen(file)
+	for i=0, nclist_i2o.count-1 {
+	    savWeight.printf("%g\t",nclist_i2o.object(i).weight)
+	}
+	savWeight.close()
+    }
+    pc.barrier()
+}
+
+objref changeWeight
+
+for rank=0, pc.nhost-1 {
+    if(rank==pc.id){
+	/*
+	changeWeight = new File()
+	sprint(file,"./change/nclist%d.dat",pc.id)
+	changeWeight.wopen(file)
+	
+	loop = nclist.count
+	for i=0, loop-1{
+	    changeWeight.printf("%d\t%d\t",pc.id,i)
+	    for j=0, rec_counter-1{
+		changeWeight.printf("%g\t",weight_rec_i[j].x(i))
+	    }
+	    changeWeight.printf("\n")
+	}
+	changeWeight.close()
+	
+	changeWeight = new File()
+	sprint(file,"./change/nclist_o1_%d.dat",pc.id)
+	changeWeight.wopen(file)
+	
+	loop = nclist_out1.count
+	for i=0, loop-1{
+	    changeWeight.printf("%d\t%d\t",pc.id,i)
+	    for j=0, rec_counter-1{
+		changeWeight.printf("%g\t",weight_rec_o1[j].x(i))
+	    }
+	    changeWeight.printf("\n")
+	}
+	changeWeight.close()
+	
+	changeWeight = new File()
+	sprint(file,"./change/nclist_o2_%d.dat",pc.id)
+	changeWeight.wopen(file)
+	
+	loop = nclist_out2.count
+	for i=0, loop-1{
+	    changeWeight.printf("%d\t%d\t",pc.id,i)
+	    for j=0, rec_counter-1{
+		changeWeight.printf("%g\t",weight_rec_o2[j].x(i))
+	    }
+	    changeWeight.printf("\n")
+	}
+	changeWeight.close()
+	*/
+
+	changeWeight = new File()
+	sprint(file,"./change/change_i2o_%d.dat",pc.id)
+	changeWeight.wopen(file)
+	
+	loop = nclist_i2o.count
+	for i=0, loop-1{
+	    changeWeight.printf("%d\t%d\t",pc.id,i)
+	    for j=0, rec_counter-1{
+		changeWeight.printf("%g\t",weight_rec_i2o[j].x(i))
+	    }
+	    changeWeight.printf("\n")
+	}
+	changeWeight.close()
+	
+    }
+}
+
+
+
+gettingtime = startsw() - gettingtime
+printf("the time elapse for write weights file is %lf \n",gettingtime)
+	
+
+//savSpike.close()
+{pc.runworker()}
+{pc.done()}
+
+/////////////end of save section///////////////////////////////////
+
+//comment out signalDA and savWeight section

@@ -1,0 +1,332 @@
+/************************************************************************************************
+in the spontaneous section, whether the frequency that cells are firing is suited or not is unclear:
+1. cells are injected current that makes cells fired 2 Hz in separated situation (now is this)
+2. cells in network are fired in 2Hz on average ( each in network is firing in 2 Hz??) 
+************************************************************************************************/
+
+
+/******************************************************************************************/
+/*
+mpi ni kansite
+tabun saishoni gid_exists() de sonzai wo kakunin sitekara yattahouga bunan!!
+*/
+/*****************************************************************************************/
+load_file("nrngui.hoc")
+
+objref nclist_us, nclist_spon, nclist_cs
+objref  us, cs, sponFire
+//ins setStim section, it is remained to describe that what cells is potentiated by DA. So, let's add in next case.
+proc setStim(){local i, j, stim_num, num_vta, dur, num_cs, stim_int, num_ecell_input, l_times, stim_dur, stim_start, stim_set_interval, stim_interval, cls localobj nc, us_tmp, cs_tmp, spon_tmp
+    stim_num = $1 //stim_dur = $1
+    num_vta = $2
+    dur = $3
+    num_cs = $4
+    stim_int = $5
+    num_ecell_input = $6
+    l_times = $7
+    stim_start = $8
+    num_cell_full = $9
+    
+    stim_dur = stimInt*stimNum//900//1900//2000// karigime
+    stim_set_interval = (stim_dur + 100) * 5
+    stim_interval = stim_dur + 100//1000
+    
+    nclist_us = new List()
+    us = new List()
+    //for cls=0, 4{
+    for cls=0, data_num*l_times-1{
+	for(i=0;i<400;i+=1){
+	    //if((i>=64*cls && i<64*(cls+1)) || (i>=320+16*cls && i<336+16*cls)){
+	    if((i>=64*stim_order.x(cls) && i<64*(stim_order.x(cls)+1)) || (i>=320+16*stim_order.x(cls) && i<336+16*stim_order.x(cls))){
+		if(pc.gid_exists(i+512)){
+		    pc.gid2cell(i+512).soma {
+			//for j=0, l_times-1{
+			    us_tmp = new NetStim()
+			    us_tmp.start = stim_start+5+stim_interval*cls//+stim_set_interval*j + 5 + stim_interval*cls
+			    us_tmp.number = stim_num///2//*3/4
+			    us_tmp.interval = stim_int//*2
+			    us_tmp.noise = 0.001//0.001
+			    us.append(us_tmp)
+			    nc = new NetCon(us_tmp,pc.gid2cell(i+512).synlist.object(1),0,0.1,0.25)
+			    nclist_us.append(nc)
+			//}
+		    }
+		}
+	    }
+	}
+    }
+    
+    nclist_cs = new List()
+    cs = new List()
+    for cls=0, data_num*l_times-1{
+	for i=0, num_ecell_input-1 {
+	    
+	    //the definition for "sa"
+	    if(stimuli[stim_order.x(cls)].x[i]){
+		if(pc.gid_exists(i)){
+		    pc.gid2cell(i).soma {
+			//for j=0, l_times-1 {
+			cs_tmp = new NetStim()
+			cs_tmp.start = stim_start+stim_interval*cls//+stim_set_interval*j
+			cs_tmp.number = stim_num//*5
+			cs_tmp.interval = stim_int
+			cs_tmp.noise = 0//0.05
+			cs.append(cs_tmp)
+			nc = new NetCon(cs_tmp,pc.gid2cell(i).synlist.object(0),0,0.1,0.1)
+			nclist_cs.append(nc)
+			
+			
+			//}
+		    }
+		}
+	    }
+	}
+    }
+    
+    for cls=0, 4 {
+	for i=0, num_ecell_input-1 {
+	    if(stimuli[cls].x[i]){
+		if(pc.gid_exists(i)){
+		    pc.gid2cell(i).soma {
+			cs_tmp = new NetStim()
+			cs_tmp.start = startTest+cls*600
+			cs_tmp.interval = stim_int
+			cs_tmp.number = 25
+			cs_tmp.noise = 0
+			cs.append(cs_tmp)
+			nc = new NetCon(cs_tmp,pc.gid2cell(i).synlist.object(0),0,0.1,0.1)
+			nclist_cs.append(nc)
+		    }
+		}
+	    }
+	}
+    }
+	
+	/*
+	if(stim_data2.x[i]){
+	    if(pc.gid_exists(i)){
+		pc.gid2cell(i).soma{
+		    for j=0, l_times-1 {
+		    	
+			cs_tmp = new NetStim()
+			cs_tmp.start = stim_start+stim_interval+stim_set_interval*j
+			cs_tmp.number = stim_num
+			cs_tmp.interval = stim_int
+			cs_tmp.noise = 0
+			cs.append(cs_tmp)
+			nc = new NetCon(cs_tmp,pc.gid2cell(i).synlist.object(0),0,0.1,0.05)
+			nclist_cs.append(nc)
+			
+			
+		    }
+		}
+	    }
+	}
+	if(stim_data3.x[i]){
+	    if(pc.gid_exists(i)){
+		for j=0, l_times-1 {
+		    pc.gid2cell(i).soma{
+			
+			cs_tmp = new NetStim()
+			cs_tmp.start = stim_start+stim_interval*2+stim_set_interval*j
+			cs_tmp.number = stim_num
+			cs_tmp.interval = stim_int
+			cs_tmp.noise = 0
+			cs.append(cs_tmp)
+			nc = new NetCon(cs_tmp,pc.gid2cell(i).synlist.object(0),0,0.1,0.05)
+			nclist_cs.append(nc)
+			
+			
+		    }
+		}
+	    }
+	}
+	if(stim_data4.x[i]){
+	    for j=0, l_times-1 {
+		if(pc.gid_exists(i)){
+		    pc.gid2cell(i).soma{
+			
+			cs_tmp = new NetStim()
+			cs_tmp.start = stim_start+stim_interval*3+stim_set_interval*j
+			cs_tmp.number = stim_num
+			cs_tmp.interval = stim_int
+			cs_tmp.noise = 0
+			cs.append(cs_tmp)
+			nc = new NetCon(cs_tmp,pc.gid2cell(i).synlist.object(0),0,0.1,0.05)
+			nclist_cs.append(nc)
+			
+			
+		    }
+		}
+	    }
+	}
+	
+	if(stim_data5.x[i]){
+	    if(pc.gid_exists(i)){
+		for j=0, l_times-1 {
+		    pc.gid2cell(i).soma{
+			
+			cs_tmp = new NetStim()
+			cs_tmp.start = stim_start+stim_interval*4+stim_set_interval*j
+			cs_tmp.number = stim_num
+			cs_tmp.interval = stim_int
+			cs_tmp.noise = 0
+			cs.append(cs_tmp)
+			nc = new NetCon(cs_tmp,pc.gid2cell(i).synlist.object(0),0,0.1,0.05)
+			nclist_cs.append(nc)
+			
+		    }
+		}
+	    }
+	}*/
+	
+
+    /*
+    nclist_us = new List()
+    us = new List()
+    if(pc.gid_exists(0)){
+	pc.gid2cell(0).soma {
+	    us_tmp = new NetStim()
+	    us_tmp.start = 15
+	    us_tmp.interval = 0
+	    us_tmp.number = 1
+	    us_tmp.noise = 0
+	    us.append(us_tmp)
+	    nc = new NetCon(us_tmp,pc.gid2cell(0).synlist.object(0),0,0.1,0.02)
+	    nclist_us.append(nc)
+	}
+    }
+    */
+    
+    /*
+    nclist_us = new List()
+    us = new List()
+    for i=0, num_vta-1 {
+	if(pc.gid_exists(i)){
+	    pc.gid2cell(i).soma{
+		us_tmp = new NetStim()
+		us_tmp.seed(25525)
+		us_tmp.number = stim_num
+		us_tmp.start = 25
+		us_tmp.interval = stim_int
+		us_tmp.noise = 0.1
+		us.append(us_tmp)
+		nc = new NetCon(us_tmp, pc.gid2cell(i).synlist.object(0),0,0.1,0.02)
+		nclist_us.append(nc)
+		//nclist_us.append(new NetCon(us_tmp, pc.gid2cell(i).synlist.object(0),0,0.0,0.02))//weight should be modified
+	    }
+	}
+    }
+
+    nclist_cs = new List()
+    cs = new List()
+    for i=0, num_cs-1{
+	if(pc.gid_exists(num_cs+i)){
+	    pc.gid2cell(num_cs+i).soma{
+		cs_tmp = new NetStim2()
+		cs_tmp.seed(25525)
+		cs_tmp.number = stim_num
+		cs_tmp.start = 45
+		cs_tmp.interval = stim_int
+		cs_tmp.noise = 0.1
+		//	printf("%d\n",num_cs)
+		cs.append(cs_tmp)
+		nc = new NetCon(cs_tmp,pc.gid2cell(num_cs+i).synlist.object(0),0,0.1,0.02)
+		nclist_cs.append(nc)
+		//nclist_cs.append(new NetCon(cs_tmp,pc.gid2cell(num_cs+i).synlist.object(0),0,0.0,0.02))//sasiatari No. NCELL_CS~ no 10 ko wo sitei
+	    }
+	}
+    }
+    */
+    
+    nclist_spon = new List()
+    sponFire = new List()
+    
+    //for i=0, cells.count-1 {
+    //	cells.object(i).soma {
+    for i=0, num_cell_full-1 {
+	if(i<256 || i>=512){
+	    if(pc.gid_exists(i)){
+		pc.gid2cell(i).soma{
+		    spon_tmp = new GammaNoise(0.85)
+		    spon_tmp.amp = 0.065
+		    spon_tmp.dur = dur
+		    spon_tmp.del = 20
+		    spon_tmp.forseed = i
+		    /*
+		    }else if((i>=512 && i<832) || (i>=912 && i<992)){
+			spon_tmp.KAPPA = 0.23//0.17
+		    }*/
+		    //ikkai comment out siteru noha warito umaku itta mono
+		    
+		    if((i>=832 && i<912) && (i>=992 && i<1012)){
+			spon_tmp.KAPPA = OUT1_SPON_I_K//0.15//0.1//0.15//0.13//learn30.28//0.14//kokogatest26desu0.23//0.28//0.18//0.14//0.13
+			spon_tmp.THETA = OUT1_SPON_I_T//0.25//0.3//0.25//learn30.32//0.25//<-for learn2 for learn1->//0.3//0.32//0.31//0.3//0.3//0.28
+			
+		    }else if(i>=512 && i<832){
+			spon_tmp.KAPPA = OUT1_SPON_E_K//0.12//0.09//0.35//0.24//0.2//0.13//0.26//0.23//<-korede choujikan test//0.17//0.22//learn4detuyosugita0.45//0.29//0.6//0.45//0.34//0.29//6
+			spon_tmp.THETA = OUT1_SPON_E_T
+		    }else if(i>=912 && i<992){
+			spon_tmp.KAPPA = 0.15//0.18//learn4detuyosugita0.38//0.23//0.52//0.38//0.28//0.23//23
+		    }else{
+			spon_tmp.KAPPA = 0.11//learn30.29//0.14//0.29//0.29//0.19//14//0.1
+			spon_tmp.THETA = 0.25//0.2//0.3
+		    }
+		    /*
+		    //if((i>=256 && i<512) || (i>=832 && i<912) || (i>=992 && i<1012)){
+                    if((i>=256 && i<512) || (i>=992 && i<1012)){
+			spon_tmp.THETA = 0.32
+			spon_tmp.KAPPA = 0.1
+			//spon_tmp.KAPPA = 0.02
+			//spon_tmp.THETA = 0.1
+			//spon_tmp.THETA = 0.24
+			//spon_tmp.KAPPA = 0.03
+			//i wanna try next time
+			//spon_tmp.THETA = 1
+			//spon_tmp.KAPPA = 0.072
+                    }else if(i>=832 && i<912){
+			spon_tmp.KAPPA = 0.024//0.015 //0.1
+			spon_tmp.THETA = 0.25//0.56 //0.16
+			//i wanna try next time
+			//spon_tmp.THETA = 2
+			//spon_tmp.KAPPA = 0.01
+			//spon_tmp.KAPPA = 0.024
+			//spon_tmp.THETA = 0.15
+		    }else{
+			//spon_tmp.THETA = 0.2
+			spon_tmp.KAPPA = 0.1
+			//spon_tmp.THETA = 0.5
+			// spon_tmp.THETA = 1.3
+			//i wanna try next time
+			//spon_tmp.THETA = 3
+			//spon_tmp.KAPPA = 0.01
+		    }
+		    */
+		    //nc = new NetCon(spon_tmp,cells.object(i).synlist.object(1),0,0.1,0.02)
+		    nc = new NetCon(spon_tmp,pc.gid2cell(i).synlist.object(1),0,0.1,0.02)
+		    sponFire.append(spon_tmp)
+		    nclist_spon.append(nc)
+		}
+	    }
+	}
+    }
+    
+     /*
+    for i=0, NCELL-1 {
+	if(pc.gid_exists(i)){
+	    //  printf("host id = %d , my gid = %d\n",pc.id,i)
+	    pc.gid2cell(i).soma {
+		spon_tmp = new GammaNoise(0.85)
+		//print sponFire
+		spon_tmp.amp = 0.065
+		spon_tmp.dur = dur
+		spon_tmp.del = 20
+		sponFire.append(spon_tmp)
+		nc = new NetCon(spon_tmp,pc.gid2cell(i).synlist.object(1),0,0.1,0.02)
+		//nclist_spon.append(new NetCon(spon_tmp, pc.gid2cell(i).synlist.object(1),0,0.0,0.02))
+		nclist_spon.append(nc)
+		//nclist_spon.append(new NetCon(sponFire[i],cells.object(i).synlist.object(1),0,0,0.02))//0.02 ha imanotokoro koteide
+	    }
+	}
+    }*/
+}
