@@ -1,7 +1,7 @@
 NEURON {
 	POINT_PROCESS ExpSynSTDP
 	RANGE tau, e, i, d, p, dtau, ptau, verbose, learning, LR, maxWeight, minWeight, numbre, debug, forSpike, tmp, forDA
-	RANGE ltd　
+	RANGE ltd
 	NONSPECIFIC_CURRENT i
 }
 
@@ -16,6 +16,7 @@ PARAMETER {
 	e = 0	(mV)
 	d = 1 <0,1>: depression factor (multiplicative to prevent < 0)
 	p = 1 : potentiation factor (additive, non-saturating)
+	ltd = 0
 	dtau = 34 (ms) : 34 depression effectiveness time constant
 	ptau = 17 (ms) : 17 Bi & Poo (1998, 2001)
 	verbose = 0
