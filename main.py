@@ -70,6 +70,7 @@ define_hoc_var("NSYN_MAX", (h.NCELL - 1) * h.NSYN)
 define_hoc_var("NCELL_FULL", h.NCELL + h.NCELL_OUT1 + h.NCELL_OUT2)
 
 startTest = h.STIM_DUR * 5 * h.LEARNING_TIMES + 500
+define_hoc_var("startTest", startTest)#pythonで定義された変数をhocでも定義できるように改良！
 dur = h.tstop_max
 define_hoc_var("vta_flag", 0)
 define_hoc_var("else_flag", 2)

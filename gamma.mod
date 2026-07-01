@@ -8,6 +8,7 @@ ENDCOMMENT
 NEURON {
     POINT_PROCESS GammaNoise
     RANGE del, dur, amp, i, R, forRand, forRand2, k, n, tmp_n, THETA, KAPPA, int_kappa, frac_kappa, b, p, x_frac, x_int, roop, i_max, i_min, times, ave_v
+    RANGE forseed
     ELECTRODE_CURRENT i
 }
 UNITS {
@@ -31,6 +32,7 @@ PARAMETER {
     frac_kappa = 0
     b = 1
     p = 1
+    forseed = 0
     x_frac = 0
     x_int = 1
     roop = 0
